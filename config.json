@@ -1,0 +1,16 @@
+{
+    "port": 3007,
+
+    "fileRoot": "/",
+
+    "other values": "see comment in config.js",
+    "x fileRoot": "{HOMEDIR}",
+    "? fileRoot": null,
+
+    "projectDir": "{HOMEDIR}/Documents",
+    "sessionDataDir": "./data",
+    
+    "debug": true,
+    "debugHeartbeat": true,
+    "debugFileservice": true
+}

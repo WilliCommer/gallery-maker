@@ -1,0 +1,53 @@
+{
+  "name": "gallery-maker",
+  "version": "2.0.0",
+  "description": "Create Photo Gallery With Browser User Interface",
+  "type": "module",
+  "bin": {
+    "gallery-maker": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "client/",
+	"docs/",
+	"public/",
+	"server/"
+  ],
+  "scripts": {
+    "start": "node ./bin/cli.js",
+    "dev": "NODE_ENV=development node dev.js",
+    "test": "node test",
+    "jsdoc": "jsdoc -c jsdoc.json"
+  },
+  "author": "Willi Commer",
+  "license": "ISC",
+  "keywords": [
+    "vanjs",
+    "bootstrap",
+    "javascript",
+    "desktop",
+    "app",
+    "nodejs",
+    "photogallery"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com"
+  },
+  "bugs": {
+    "url": "https://github.com"
+  },
+  "homepage": "https://github.com",
+  "dependencies": {
+    "express": "^5.3.0",
+    "open": "^11.0.0",
+    "trash": "^10.1.1",
+    "vanjs-bootstrap": "^1.2.0",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "docdash": "^2.0.2",
+    "esbuild": "^0.28.2",
+    "nodemon": "^3.1.14"
+  }
+}

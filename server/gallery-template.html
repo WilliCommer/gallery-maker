@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{pageTitle}}</title>
+    <style>
+/* gallery-style.css */
+
+:root {
+    --thumb-size: 4em;
+    --gap: 2px;
+}
+
+body {
+    margin: 0;
+    padding: 1em;
+    height: 100vh;
+    overflow: hidden;
+    font-family: sans-serif;
+}
+
+/* Layout Container */
+.gallery-container {
+    display: flex;
+    gap: var(--gap);
+    height: calc(100vh - 2em);
+    width: 100%;
+}
+
+/* Thumbnail Liste */
+#thumb-list {
+    display: flex;
+    overflow: auto;
+    flex-shrink: 0;
+    background: #eee;
+    scroll-behavior: smooth;
+}
+
+.thumb-item {
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    object-fit: cover;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.thumb-item.active {
+    border-color: #007bff !important;
+    border-width: 2px !important;
+}
+
+/* Carousel Anpassung */
+.carousel {
+    flex-grow: 1;
+    background: #000;
+    display: flex;
+    align-items: center;
+    position: relative; /* Wichtig für absolute Buttons/Captions */
+}
+
+.carousel-inner {
+    height: 100%;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.carousel-item {
+    height: 100%;
+    width: 100%;
+    display: none; /* Versteckt standardmäßig alle Slides */
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.carousel-item.active {
+    display: block; /* Zeigt nur das aktive Slide */
+}
+
+.carousel-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: zoom-in;
+}
+
+/* Beschriftungen (Ersatz für d-none d-md-block) */
+.carousel-caption-alt {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 15%;
+    right: 15%;
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+    color: #fff;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+
+.carousel-caption {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 15%;
+    right: 15%;
+    color: #fff;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+
+.carousel-caption-text {
+    margin-block-start: 0.33em;
+    margin-block-end: 0.33em;
+}
+
+.carousel-caption-comment {
+    margin-block-start: 0.33em;
+    margin-block-end: 0.33em;
+}
+
+
+@media (max-width: 768px) {
+    .carousel-caption {
+        display: none; /* Blendet Caption auf kleinen Bildschirmen aus */
+    }
+}
+
+/* Manuelle Carousel Controls (Pfeile) */
+.carousel-control-prev,
+.carousel-control-next {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 15%;
+    padding: 0;
+    color: #fff;
+    text-align: center;
+    background: none;
+    border: 0;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+    cursor: pointer;
+    font-size: 2rem;
+}
+.carousel-control-prev { left: 0; }
+.carousel-control-next { right: 0; }
+.carousel-control-prev:hover, .carousel-control-next:hover { opacity: 0.9; }
+
+/* Responsives Layout via Media Queries */
+@media (orientation: landscape) {
+    .gallery-container {
+        flex-direction: column;
+    }
+
+    #thumb-list {
+        flex-direction: row;
+        width: 100%;
+        order: 2;
+    }
+
+    .carousel {
+        order: 1;
+        height: calc(100% - var(--thumb-size) - var(--gap));
+    }
+}
+
+@media (orientation: portrait) {
+    .gallery-container {
+        flex-direction: row;
+    }
+
+    #thumb-list {
+        flex-direction: column;
+        width: var(--thumb-size);
+        height: 100%;
+        order: 1;
+    }
+
+    .carousel {
+        order: 2;
+        width: calc(100% - var(--thumb-size) - var(--gap));
+    }
+}
+
+/* Custom Fullscreen Modal ohne Bootstrap */
+.custom-modal {
+    display: none; /* Standardmäßig unsichtbar */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+.custom-modal.show {
+    display: flex;
+}
+.custom-modal img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+</style>
+</head>
+
+<body>
+    <div class="gallery-container">
+        <div id="thumb-list">
+            {{thumbList}}
+        </div>
+        
+        <div id="mainCarousel" class="carousel">
+            <div class="carousel-inner" id="carousel-content">
+                {{carouselContent}}
+            </div>
+            
+            <!-- Pfeile nutzen nun einfaches JS -->
+            <button class="carousel-control-prev" type="button" onclick="changeSlide(-1)">&lsaquo;</button>
+            <button class="carousel-control-next" type="button" onclick="changeSlide(1)">&rsaquo;</button>
+        </div>
+    </div>
+
+    <!-- Custom Fullscreen Modal -->
+    <div id="fsModal" class="custom-modal" onclick="hideFS()">
+        <img id="fsImage" src="" alt="Fullscreen">
+    </div>
+
+    <script>
+
+        const slides = document.querySelectorAll('.carousel-item');
+        const thumbs = document.querySelectorAll('.thumb-item');
+        const fsModal = document.getElementById('fsModal');
+        const fsImage = document.getElementById('fsImage');
+        let currentIndex = 0;
+
+        // Funktion zum Wechseln des Slides (Carousel-Logik)
+        function updateGallery(index) {
+            // Index-Grenzen absichern (Looping)
+            if (index >= slides.length) index = 0;
+            if (index < 0) index = slides.length - 1;
+            
+            currentIndex = index;
+
+            // Slides aktualisieren
+            slides.forEach((slide, i) => {
+                if (i === currentIndex) {
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+
+            // Thumbnails aktualisieren
+            thumbs.forEach((thumb, i) => {
+                if (i === currentIndex) {
+                    thumb.classList.add('active');
+                    thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                } else {
+                    thumb.classList.remove('active');
+                }
+            });
+        }
+
+        // Klick auf Vor/Zurück Buttons
+        function changeSlide(direction) {
+            updateGallery(currentIndex + direction);
+        }
+
+        // Klick auf Thumbnail
+        function thumbImgClick(index) {
+            updateGallery(parseInt(index));
+        }
+
+        // Fullscreen Modal Funktionen
+        function showFS(src, rotate) {
+            fsImage.src = src;
+            fsImage.style.transform = rotate ? "rotate(" + rotate + "deg)" : "none";
+            fsModal.classList.add('show');
+        }
+
+        function hideFS() {
+            fsModal.classList.remove('show');
+        }
+    </script>
+</body>
+</html>

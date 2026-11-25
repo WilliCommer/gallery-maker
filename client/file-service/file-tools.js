@@ -1,0 +1,369 @@
+import { Icon } from 'vanjs-bootstrap';
+import { sortList } from './sorter';
+import * as fs from './file-service-api.js';
+import joinPaths from './joinpaths.js';
+import i18n from './i18n.js';
+
+const {t} = i18n;
+
+
+
+/**
+ * FileItem hold backend file properties
+ * @class
+ * 
+ * @property {Directory} directory - Das übergeordnete Verzeichnis.
+ * @property {string} name - Der Name der Datei.
+ * @property {boolean} isDir - Gibt an, ob es sich um ein Verzeichnis handelt.
+ * @property {number} size - Die Dateigröße.
+ * @property {Date} time - Der Zeitpunkt der letzten Änderung.
+ * @property {string} path - Der vollständige Pfad (dir/subdir/name).
+ * @property {string} ext - Die Dateiendung.
+ */
+export class FileItem {
+
+    /**
+     * @param {string|object} [file={}] - Dateiname als String oder ein Objekt {name: string}
+     * @param {Directory} directory - Das übergeordnete Verzeichnis (owner)
+     * @constructor
+     */
+    constructor(file = {}, directory) {
+        this.directory = directory || new Directory();
+        
+        if (typeof file === 'string') {
+            file = { name: file };
+        }
+        
+        this.name = file.name;
+        this.isDir = file.isDir;
+        
+        // Fehler behoben: {Date} statt (Date)
+        this.time = file.time;  
+        this.size = file.size; 
+        
+        // this.path = [...this.directory.path, this.name].join('/');
+        this.ext = fileExtension(this.name);
+    }
+
+    /**
+     * Vergleicht diese Datei mit einer anderen Datei oder einem Dateinamen.
+     * @param {string|FileItem} file - Die zu vergleichende Datei oder der Name.
+     * @returns {boolean} True, wenn die Namen übereinstimmen.
+     */
+    sameAs(file) {
+        if (typeof file === 'string') return file === this.name;
+        return file.name === this.name;
+    }
+
+    /**
+     * Gibt den Pfad des übergeordneten Verzeichnisses zurück.
+     * @type {string}
+     */
+    get dir() {
+        return this.directory.dir;
+    }
+
+    /**
+     * POSIX path relative to file system root like 'Documents/file.ext'
+     * @returns {string}
+     */
+    get pathName() {
+        return [...this.directory.path, this.name].join('/');
+    }
+
+    /**
+     * file system path POSIX like 'C:/Users/wcs/Document/file.ext'
+     * @returns {string}
+     */
+    get filePath() {
+        return joinPaths(this.directory.resolvedDir, this.name)
+    }
+}
+
+
+
+/**
+ * Directory interface class for backend file handling
+ * @class
+ * 
+ * @property {Array<String>} path - actual path as array of string
+ * @property {Array<FileItem>} path - list of files at path
+ * @property {function} sort - optional sort function
+ * @property {function} filter - optional filter function
+ * @property {string} filesUrl - backend URL
+ * 
+ */
+
+export class Directory {
+
+    /**
+     * 
+     * @param {Object} args - options
+     * @param {function} args.sort - optional function (FileList)
+     * @param {Object} args.filter - optional function (FileList)
+     * @param {Array<String>} args.path - optional []
+     * @param {Array<FileItem>} args.files - optional []
+     * @constructor
+     * 
+     */
+
+    constructor(args = {}){
+        this.path = args.path || [];
+        this.files = [];
+        this.sort = args.sort || (files => sortList(files, '-isDir,name'));
+        this.filter = args.filter || (files => files);
+        this.filesUrl = fs.fsURL;  // !update
+        this.setValues(args);
+    }
+
+    setValues(args = {}){
+        this.path = args.path || [];
+        this.files = [];
+        (args.files || []).forEach(f => this.addFile(f));
+    }
+
+    /**
+     * dir - path string "root/sub"
+     */
+    get dir() {return [...this.path].join('/')}
+
+    /**
+     * 
+     * @param {FileItem} file 
+     * @returns {FileItem}
+     */
+    addFile(file) {
+        if(file) {
+            file = new FileItem(file, this);
+            this.files.push(file);
+            return file;
+        }
+    }
+    
+
+    /**
+     * fetch directory files from backend (sorted and filtered)
+     * @param {Arra<string> | string} path 
+     * @returns {boolean} - "true" or "false" if directory do not exists
+     */
+    async getDir(path) {
+        let data = await fs.getDir(path);
+        // console.log('getDir', data)
+        if (data) {
+            this.files = [];
+            data.files.forEach( f => this.addFile(f) );
+            this.files = this.filter(this.files);
+            this.files = this.sort(this.files);
+            this.path = data.path;
+            this.resolvedDir = data.resolvedDir;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * return the file item matching "name"
+     * @param {string} name - a file name
+     * @returns {FileItem} matching file item in files or undefined
+     */
+    fileByName(name) { 
+        if(!name) return;
+        return this.files.find( file => !name.localeCompare(file.name, undefined, {sensitivity: 'base'})) 
+    }
+
+}
+
+
+
+
+
+
+
+/**
+ * check if "name" is a valid file name
+ * @param {string} name - a suspected file name
+ * @returns {boolean}
+ */
+export function isValidFilename(name) {
+    // 1. Grundlegende Typprüfung und Länge (Windows max 255 Zeichen)
+    if (typeof name !== 'string' || name.length === 0 || name.length > 255) return false;
+
+    // 1. Verbotene Zeichen prüfen
+    if (/[<>:"/\\|?*]/.test(name)) return false;
+
+    // 2. Darf nicht mit Punkt oder Leerzeichen enden
+    if (/[. ]$/.test(name)) return false;
+
+    // 3. Reservierte Windows-Namen (z.B. CON, PRN, LPT1) ausschließen
+    const reserviert = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
+    if (reserviert.test(name)) return false;
+
+    return name.length > 0;
+}
+
+
+/**
+ * check if name is a valid directory name
+ * @param {string} name - a suspected directory name
+ * @returns {boolean}
+ */
+export function isValidDirectoryName(name) {
+    // 1. Grundlegende Typprüfung und Länge (Windows max 255 Zeichen)
+    if (typeof name !== 'string' || name.length === 0 || name.length > 255) return false;
+
+    // 2. Verbotene Zeichen (Windows: \ / : * ? " < > |)
+    // Ein Verzeichnisname darf KEINE Pfadtrenner enthalten
+    if (/[<>:"/\\|?*]/.test(name)) return false;
+
+    // 3. Darf nicht mit Punkt oder Leerzeichen enden (Windows-Einschränkung)
+    if (/[. ]$/.test(name)) return false;
+
+    // 4. Reservierte Windows-Gerätenamen ausschließen (CON, PRN, etc.)
+    // Diese Namen sind auch für Ordner ohne Endung verboten
+    const reserviert = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+    if (reserviert.test(name)) return false;
+
+    // 5. Verbotene Kontrollzeichen (ASCII 0-31)
+    if (/[\x00-\x1f]/.test(name)) return false;
+
+    return true;
+}
+
+const fileIcon = name => props => Icon(`<svg class="file-icon" fill="currentColor" stroke="currenColor"><use href="#icon-file-${name}"></use></svg>`, props);
+
+var extMap = new Map();
+
+['png', 'tif', 'tiff', 'wbmp', 'ico', 'jpeg', 'jpg', 'bmp', 'gif', 'svg', 'webp']
+.forEach(e => extMap.set(e, fileIcon('image')));
+['mid', 'midi', 'kar', 'mp3', 'ogg', 'ra']
+.forEach(e => extMap.set(e, fileIcon('audio')));
+['doc', 'docx']
+.forEach(e => extMap.set(e, fileIcon('word')));
+['ppt'].forEach(e => extMap.set(e, fileIcon('powerpoint')));
+['xls', 'ods', 'xlsx'].forEach(e => extMap.set(e, fileIcon('excel')));
+['3gpp', '3gp', 'mpeg', 'mpg', 'mov', 'flv', 'asx', 'asf', 'wmv', 'avi', 'm4p', 'mp4']
+.forEach(e => extMap.set(e, fileIcon('video')));
+['jar', '7z', 'rar', 'zip', 'tgz'].forEach(e => extMap.set(e, fileIcon('zipper')));
+['pdf'].forEach(e => extMap.set(e, fileIcon('pdf')));
+['xml', 'js', 'jsx', 'ts', 'wml', 'pl', 'pm', 'go', 'java']
+.forEach(e => extMap.set(e, fileIcon('code')));
+['html', 'htm', 'shtml', 'txt', 'rtf', 'md']
+.forEach(e => extMap.set(e, fileIcon('text')));
+
+
+
+/**
+ * Find an icon for various details.
+ * @param {Object} args - properties to describe a file or directory name 
+ * @param {FileItem} args.file - a FileItem
+ * @param {string} args.name - a file name with extension
+ * @param {string} args.ext - a file extension
+ * @param {boolean} args.isDir - will return a directory icon if true
+ * @param {Object} args.props - extra properties for the returning icon
+ * @returns {Icon} - HTML image element
+ */
+export function FileIcon({ file, name = '', ext = '', isDir = false, ...props }) {
+    if(file) {name=file.name; isDir=file.isDir}
+    if (isDir  && name ==='..') return Icon('↰', props);
+    // if (isDir) return fileIcon('folder')(props);
+    if (isDir) return Icon('<svg viewBox="0 0 36 36"><path fill="#269" d="M0 29c0 2.209 1.791 4 4 4h24c2.209 0 4-1.791 4-4V12c0-2.209-1.791-4-4-4h-9c-3.562 0-3-5-8.438-5H4C1.791 3 0 4.791 0 7v22z"/><path fill="#55ACEE" d="M30 10h-6.562C18 10 18.562 15 15 15H6c-2.209 0-4 1.791-4 4v10c0 .553-.448 1-1 1s-1-.447-1-1c0 2.209 1.791 4 4 4h26c2.209 0 4-1.791 4-4V14c0-2.209-1.791-4-4-4z"/></svg>',
+        props );
+    // if (isDir) return Icon('📁',props);
+    
+    if (name && !ext) ext = fileExtension(name);
+    let ico = extMap.get(ext);
+    if (ico) return ico(props);
+    return fileIcon('any')(props);
+}
+
+/**
+ * get the extension from an file name
+ * @param {string} file - file name or FileItem
+ * @returns {string} - return extension without '.'
+ */
+export function fileExtension(file) {
+    let name;
+    if(typeof file === 'string') {
+        name = file
+    } else {
+        name = (!file || file.isDir) ? '' : file.name;
+    }
+    if(!name) return '';
+    let sn = name.split('.');
+    let ext = sn.length > 1 ? sn.pop() : '';
+    return ext.toLowerCase();
+}
+
+
+const fileSprite = Icon(`<svg style="display: none;" xmlns="http://w3.org">
+  <symbol id="icon-file-word" viewBox="0 0 384 512"><path d="M365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0H64C28.65 0 0 28.65 0 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h160L224 128c0 17.67 14.33 32 32 32h79.1V448zM214.6 248C211.3 238.4 202.2 232 192 232s-19.25 6.406-22.62 16L144.7 318.1l-25.89-77.66C114.6 227.8 101 221.2 88.41 225.2C75.83 229.4 69.05 243 73.23 255.6l48 144C124.5 409.3 133.5 415.9 143.8 416c10.17 0 19.45-6.406 22.83-16L192 328.1L217.4 400C220.8 409.6 229.8 416 240 416c10.27-.0938 19.53-6.688 22.77-16.41l48-144c4.188-12.59-2.594-26.16-15.17-30.38c-12.61-4.125-26.2 2.594-30.36 15.19l-25.89 77.66L214.6 248z" /></symbol>
+  <symbol id="icon-file-zipper" viewBox="0 0 384 512"><path d="M365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0L64-.0001c-35.35 0-64 28.65-64 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h48V64h64V48.13h48.01L224 128c0 17.67 14.33 32 32 32h79.1V448zM176 96h-64v32h64V96zM176 160h-64v32h64V160zM176 224h-64l-30.56 116.5C73.51 379.5 103.7 416 144.3 416c40.26 0 70.45-36.3 62.68-75.15L176 224zM160 368H128c-8.836 0-16-7.164-16-16s7.164-16 16-16h32c8.836 0 16 7.164 16 16S168.8 368 160 368z" /></symbol>
+  <symbol id="icon-file-video" viewBox="0 0 384 512"><path d="M365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0H64C28.65 0 0 28.65 0 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h160L224 128c0 17.67 14.33 32 32 32h79.1V448zM240 288c0-17.67-14.33-32-32-32h-96c-17.67 0-32 14.33-32 32v96c0 17.67 14.33 32 32 32h96c17.67 0 32-14.33 32-32v-16.52l43.84 30.2C292.3 403.5 304 397.6 304 387.4V284.6c0-10.16-11.64-16.16-20.16-10.32L240 304.5V288z" /></symbol>
+  <symbol id="icon-file-powerpoint" viewBox="0 0 384 512"><path d="M365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0H64C28.65 0 0 28.65 0 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h160L224 128c0 17.67 14.33 32 32 32h79.1V448zM200 224H128C119.2 224 112 231.2 112 240v168c0 13.25 10.75 24 24 24S160 421.3 160 408v-32h44c44.21 0 79.73-37.95 75.69-82.98C276.1 253.2 240 224 200 224zM204 328H160V272h44c15.44 0 28 12.56 28 28S219.4 328 204 328z" /></symbol>
+  <symbol id="icon-file-pdf" viewBox="0 0 384 512"><path d="M320 464C328.8 464 336 456.8 336 448V416H384V448C384 483.3 355.3 512 320 512H64C28.65 512 0 483.3 0 448V416H48V448C48 456.8 55.16 464 64 464H320zM256 160C238.3 160 224 145.7 224 128V48H64C55.16 48 48 55.16 48 64V192H0V64C0 28.65 28.65 0 64 0H229.5C246.5 0 262.7 6.743 274.7 18.75L365.3 109.3C377.3 121.3 384 137.5 384 154.5V192H336V160H256zM88 224C118.9 224 144 249.1 144 280C144 310.9 118.9 336 88 336H80V368C80 376.8 72.84 384 64 384C55.16 384 48 376.8 48 368V240C48 231.2 55.16 224 64 224H88zM112 280C112 266.7 101.3 256 88 256H80V304H88C101.3 304 112 293.3 112 280zM160 240C160 231.2 167.2 224 176 224H200C226.5 224 248 245.5 248 272V336C248 362.5 226.5 384 200 384H176C167.2 384 160 376.8 160 368V240zM192 352H200C208.8 352 216 344.8 216 336V272C216 263.2 208.8 256 200 256H192V352zM336 224C344.8 224 352 231.2 352 240C352 248.8 344.8 256 336 256H304V288H336C344.8 288 352 295.2 352 304C352 312.8 344.8 320 336 320H304V368C304 376.8 296.8 384 288 384C279.2 384 272 376.8 272 368V240C272 231.2 279.2 224 288 224H336z" /></symbol>
+  <symbol id="icon-file-image" viewBox="0 0 384 512"><path d="M365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0H64C28.65 0 0 28.65 0 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h160L224 128c0 17.67 14.33 32 32 32h79.1V448zM215.3 292c-4.68 0-9.051 2.34-11.65 6.234L164 357.8l-11.68-17.53C149.7 336.3 145.3 334 140.7 334c-4.682 0-9.053 2.34-11.65 6.234l-46.67 70c-2.865 4.297-3.131 9.82-.6953 14.37C84.09 429.2 88.84 432 93.1 432h196c5.163 0 9.907-2.844 12.34-7.395c2.436-4.551 2.17-10.07-.6953-14.37l-74.67-112C224.4 294.3 220 292 215.3 292zM128 288c17.67 0 32-14.33 32-32S145.7 224 128 224S96 238.3 96 256S110.3 288 128 288z" /></symbol>
+  <symbol id="icon-file-folder" viewBox="0 0 512 512"><path d="M447.1 96h-172.1L226.7 50.75C214.7 38.74 198.5 32 181.5 32H63.1c-35.35 0-64 28.66-64 64v320c0 35.34 28.65 64 64 64h384c35.35 0 64-28.66 64-64V160C511.1 124.7 483.3 96 447.1 96zM463.1 416c0 8.824-7.178 16-16 16h-384c-8.822 0-16-7.176-16-16V96c0-8.824 7.178-16 16-16h117.5c4.273 0 8.293 1.664 11.31 4.688L255.1 144h192c8.822 0 16 7.176 16 16V416z" /></symbol>
+  <symbol id="icon-file-excel" viewBox="0 0 384 512"><path d="M365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0H64C28.65 0 0 28.65 0 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h160L224 128c0 17.67 14.33 32 32 32h79.1V448zM229.1 233.3L192 280.9L154.9 233.3C146.8 222.8 131.8 220.9 121.3 229.1C110.8 237.2 108.9 252.3 117.1 262.8L161.6 320l-44.53 57.25c-8.156 10.47-6.25 25.56 4.188 33.69C125.7 414.3 130.8 416 135.1 416c7.156 0 14.25-3.188 18.97-9.25L192 359.1l37.06 47.65C233.8 412.8 240.9 416 248 416c5.125 0 10.31-1.656 14.72-5.062c10.44-8.125 12.34-23.22 4.188-33.69L222.4 320l44.53-57.25c8.156-10.47 6.25-25.56-4.188-33.69C252.2 220.9 237.2 222.8 229.1 233.3z" /></symbol>
+  <symbol id="icon-file-audio" viewBox="0 0 384 512"><path d="M365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0L64-.0001c-35.35 0-64 28.65-64 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h160L224 128c0 17.67 14.33 32 32 32h79.1V448zM171.5 259.5L136 296H92C85.38 296 80 301.4 80 308v56C80 370.7 85.38 376 92 376H136l35.5 36.5C179.1 420 192 414.8 192 404v-136C192 257.3 179.1 251.9 171.5 259.5zM235.1 260.7c-6.25 6.25-6.25 16.38 0 22.62C235.3 283.5 256 305.1 256 336c0 30.94-20.77 52.53-20.91 52.69c-6.25 6.25-6.25 16.38 0 22.62C238.2 414.4 242.3 416 246.4 416s8.188-1.562 11.31-4.688C258.1 410.1 288 380.5 288 336s-29.05-74.06-30.28-75.31C251.5 254.4 241.3 254.4 235.1 260.7z" /></symbol>
+  <symbol id="icon-file-any" viewBox="0 0 384 512"><path d="M0 64C0 28.65 28.65 0 64 0H229.5C246.5 0 262.7 6.743 274.7 18.75L365.3 109.3C377.3 121.3 384 137.5 384 154.5V448C384 483.3 355.3 512 320 512H64C28.65 512 0 483.3 0 448V64zM336 448V160H256C238.3 160 224 145.7 224 128V48H64C55.16 48 48 55.16 48 64V448C48 456.8 55.16 464 64 464H320C328.8 464 336 456.8 336 448z" /></symbol>
+  <symbol id="icon-file-code" viewBox="0 0 384 512"><path d="M162.1 257.8c-7.812-7.812-20.47-7.812-28.28 0l-48 48c-7.812 7.812-7.812 20.5 0 28.31l48 48C137.8 386.1 142.9 388 148 388s10.23-1.938 14.14-5.844c7.812-7.812 7.812-20.5 0-28.31L128.3 320l33.86-33.84C169.1 278.3 169.1 265.7 162.1 257.8zM365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0H64C28.65 0 0 28.65 0 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h160L224 128c0 17.67 14.33 32 32 32h79.1V448zM221.9 257.8c-7.812 7.812-7.812 20.5 0 28.31L255.7 320l-33.86 33.84c-7.812 7.812-7.812 20.5 0 28.31C225.8 386.1 230.9 388 236 388s10.23-1.938 14.14-5.844l48-48c7.812-7.812 7.812-20.5 0-28.31l-48-48C242.3 250 229.7 250 221.9 257.8z" /></symbol>
+  <symbol id="icon-file-text" viewBox="0 0 384 512"><path d="M365.3 93.38l-74.63-74.64C278.6 6.742 262.3 0 245.4 0L64-.0001c-35.35 0-64 28.65-64 64l.0065 384c0 35.34 28.65 64 64 64H320c35.2 0 64-28.8 64-64V138.6C384 121.7 377.3 105.4 365.3 93.38zM336 448c0 8.836-7.164 16-16 16H64.02c-8.838 0-16-7.164-16-16L48 64.13c0-8.836 7.164-16 16-16h160L224 128c0 17.67 14.33 32 32 32h79.1V448zM96 280C96 293.3 106.8 304 120 304h144C277.3 304 288 293.3 288 280S277.3 256 264 256h-144C106.8 256 96 266.8 96 280zM264 352h-144C106.8 352 96 362.8 96 376s10.75 24 24 24h144c13.25 0 24-10.75 24-24S277.3 352 264 352z" /></symbol>
+</svg>`);
+
+document.body.appendChild(fileSprite)
+
+/**
+ * Extensions and Title for image, audio, video, word, excel, pdf, markdown
+ */
+export const MIME_GROUPS = {
+    'image': {
+        extensions: ['png', 'tif', 'tiff', 'wbmp', 'ico', 'jpeg', 'jpg', 'bmp', 'gif', 'svg', 'webp'],
+        get title() {return t('image-files')}
+    },
+    'audio': {
+        extensions: ['mid', 'midi', 'kar', 'mp3', 'ogg', 'ra'],
+        get title() {return t('audio-files')}
+    },
+    'video': {
+        extensions: ['3gpp', '3gp', , 'mpeg', 'mpg', 'mov', 'flv', 'asx', 'asf', 'wmv', 'avi', 'm4p', 'mp4'],
+        get title() {return t('video-files')}
+    },
+    'word': {
+        extensions: ['doc', 'docx'],
+        get title() {return t('word-files')}
+    },
+    'excel': {
+        extensions: ['xls', 'ods', 'xlsx'],
+        get title() {return t('excel-files')}
+    },
+    'pdf': {
+        extensions: ['pdf'],
+        get title() {return t('pdf-files')}
+    },
+    'markdown': {
+        extensions: ['md', 'markdown'],
+        get title() {return t('md-files')}
+    },
+    'svg': {
+        extensions: ['svg'],
+        get title() {return t('svg-files')}
+    }
+}
+
+/**
+ * check if file belongs to a mime group
+ * @param {FileItem} file - FileItem or string file name
+ * @param {string} mime - a MIME_GROUPS member
+ * @returns {boolean}
+ * 
+ * @example
+ * fileIsMime( 'any.jpg', 'image' ) // return true
+ * fileIsMime( 'README.md', 'image' ) // return false
+ */
+export function fileIsMime( file, mime ) {
+    const ext = fileExtension(file);
+    const group = MIME_GROUPS[mime];
+    if(!ext || !group) return;
+    return group.extensions.includes(ext)
+}
+

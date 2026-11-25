@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>client/file-service/file-service-api.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Directory.html">Directory</a><ul class='methods'><li data-type='method'><a href="Directory.html#addFile">addFile</a></li><li data-type='method'><a href="Directory.html#fileByName">fileByName</a></li><li data-type='method'><a href="Directory.html#getDir">getDir</a></li></ul></li><li><a href="FileItem.html">FileItem</a><ul class='methods'><li data-type='method'><a href="FileItem.html#sameAs">sameAs</a></li></ul></li><li><a href="FlexibleSelect.html">FlexibleSelect</a></li></ul><h3>Modules</h3><ul><li><a href="module-file-service-api.html">file-service-api</a><ul class='methods'><li data-type='method'><a href="module-file-service-api.html#.exists">exists</a></li><li data-type='method'><a href="module-file-service-api.html#.getDir">getDir</a></li><li data-type='method'><a href="module-file-service-api.html#.getURL">getURL</a></li><li data-type='method'><a href="module-file-service-api.html#.mkDir">mkDir</a></li><li data-type='method'><a href="module-file-service-api.html#.open">open</a></li><li data-type='method'><a href="module-file-service-api.html#.readTextFile">readTextFile</a></li><li data-type='method'><a href="module-file-service-api.html#.setURL">setURL</a></li><li data-type='method'><a href="module-file-service-api.html#.trash">trash</a></li><li data-type='method'><a href="module-file-service-api.html#.trashFile">trashFile</a></li><li data-type='method'><a href="module-file-service-api.html#.writeFile">writeFile</a></li></ul></li><li><a href="module-heartbeat-router.html">heartbeat-router</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ButtonCancel">ButtonCancel</a></li><li><a href="global.html#ButtonDeleteSelection">ButtonDeleteSelection</a></li><li><a href="global.html#ButtonExplorer">ButtonExplorer</a></li><li><a href="global.html#ButtonNewFolder">ButtonNewFolder</a></li><li><a href="global.html#ButtonOpen">ButtonOpen</a></li><li><a href="global.html#ButtonOpenSingle">ButtonOpenSingle</a></li><li><a href="global.html#ButtonSave">ButtonSave</a></li><li><a href="global.html#ButtonSelectFolder">ButtonSelectFolder</a></li><li><a href="global.html#DirectoryBreadCrumb">DirectoryBreadCrumb</a></li><li><a href="global.html#FileDialog">FileDialog</a></li><li><a href="global.html#FileIcon">FileIcon</a></li><li><a href="global.html#I18n">I18n</a></li><li><a href="global.html#MIME_GROUPS">MIME_GROUPS</a></li><li><a href="global.html#SelectController">SelectController</a></li><li><a href="global.html#SelectFileBox">SelectFileBox</a></li><li><a href="global.html#fileExtension">fileExtension</a></li><li><a href="global.html#fileIsMime">fileIsMime</a></li><li><a href="global.html#getDir">getDir</a></li><li><a href="global.html#isValidDirectoryName">isValidDirectoryName</a></li><li><a href="global.html#isValidFilename">isValidFilename</a></li><li><a href="global.html#parsePath">parsePath</a></li><li><a href="global.html#selectDirectoryDlg">selectDirectoryDlg</a></li><li><a href="global.html#selectFileDialog">selectFileDialog</a></li><li><a href="global.html#selectFolderDialog">selectFolderDialog</a></li><li><a href="global.html#selectImageFilesDlg">selectImageFilesDlg</a></li><li><a href="global.html#selectSingleFileDialog">selectSingleFileDialog</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">client/file-service/file-service-api.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>
+
+/** 
+ * @module file-service-api
+ * @description client interface to backend api
+ */
+
+import joinPaths from './joinpaths.js'
+import parsePath from './parse-path.js'
+
+/**
+ * actual backend URL root
+ */
+export var fsURL = '/app/file';
+
+/**
+ * set backend URL root
+ * @param {string} url 
+ */
+export function setURL(url) {
+    fsURL = url;
+};
+
+/**
+ * URL factory for browser GET file, mainly images
+ * @param {string} filename 
+ * @returns {string}
+ */
+export function getURL(filename) {
+    const parsed = parsePath(filename);
+    const url = joinPaths( fsURL, 'get', parsed.path, parsed.base )
+    return url
+}
+// export function getURL(filename) {
+//     return [fsURL, 'get', filename].join('/')  // encodeURI nicht benötigt, macht Browser
+// }
+
+
+async function postJson( command, data ) {
+    try {
+        const response = await fetch(fsURL + '/' + command, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error(`Response status: ${response.status}`);
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+
+
+
+/**
+ * @param {string} path 
+ * @returns {object}
+ */
+export async function getDir( path = '' ) {
+    return await postJson( 'files', {path} )
+}
+
+
+/**
+ * @param {string} path 
+ * @param {string} newDir
+ * @returns {boolean}
+ */
+export async function mkDir( path, newDir ) {
+    if (typeof path === 'string')
+        path = path.split('/');
+    if (newDir) path.push(newDir);
+    return await postJson( 'mkdir', {path} )
+}
+
+
+/**
+ * 
+ * @param {string} filename - path to file
+ * @returns {string} - file content as text 
+ */
+export async function readTextFile( filename ) {
+    try {
+        const response = await fetch(fsURL + '/' + 'readtextfile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({filename})
+        });
+        if (!response.ok) throw new Error(`Response status: ${response.status}`);
+        const result = await response.text();
+        return result;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+// export async function readFile( fileName ) {
+//     const parsed = parsePath(fileName);
+//     let response = await fetch(fsURL + '/read', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({ filename })
+//     });
+//     if (!response.ok) throw new Error('Network response was not ok');
+//     const text = await response.text();
+//     return text;
+// }
+
+
+/**
+ * @param {string} filename 
+ * @param {string} content
+ * @returns {boolean}
+ */
+export async function writeFile( filename, content ) {
+    return await postJson( 'write', {filename, content} )
+}
+
+
+/**
+ * @param {string} filename 
+ * @returns {boolean}
+ */
+export async function exists( filename ) {
+    return await postJson( 'exists', {filename} )
+}
+
+/**
+ * @param {string} filename 
+ * @returns {boolean}
+ */
+export async function trashFile( filename ) {
+    return await postJson( 'trash', {filename} )
+}
+
+/**
+ * 
+ * @param {string} directory
+ * @param {Array&lt;string>} files 
+ * @returns {boolean}
+ */
+export async function trash(directory, files) {
+    return await postJson( 'trash', {directory, files} )
+}
+
+/**
+ * @param {string} filename - document or program name
+ * @param {Array&lt;string>} args - program arguments
+ */
+export async function open( filename, args ) {
+    return await postJson( 'open', {filename, args} )
+}
+
+export async function getFileSystemPath( path ) {
+    const info = await exists( path )
+    return info?.path;
+}
+
+export async function normalizeFilename( filename ) {
+    const fullName = await getFileSystemPath(filename) || filename;
+    return joinPaths(fullName)
+}
+
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Nov 25 2026 18:11:26 GMT+0100 (Mitteleuropäische Normalzeit) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+
+</body>
+</html>

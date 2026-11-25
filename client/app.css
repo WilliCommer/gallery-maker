@@ -1,0 +1,71 @@
+/* svg in button, overwrite vertical-align: middle */
+
+.btn svg {
+    vertical-align: baseline;
+}
+
+:root {
+    --thumb-size: 15em;
+    --gap: 2px;
+}
+
+.thumb-item {
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    object-fit: cover;
+}
+
+
+.breadcrumb-item.tight+.breadcrumb-item.tight,
+.breadcrumb-item.tight+.breadcrumb-item.tight::before {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Nur den Rand und Schatten anpassen, das Icon bleibt erhalten */
+.form-control.is-valid,
+.was-validated .form-control:valid {
+    border-color: var(--bs-border-color) !important;
+}
+
+/* Fokus-Zustand: Rand blau statt grün */
+.form-control.is-valid:focus,
+.was-validated .form-control:valid:focus {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+
+
+/* CSS-Voraussetzungen für die Positionierung */
+.smart-modal .modal-dialog {
+    margin: 0;
+    position: absolute;
+    width: 40em;
+    max-width: calc(100vw - 20px);
+    /* Sicherheit für sehr kleine Screens */
+    z-index: 1060;
+}
+
+/* Verhindert das typische "Einfliegen" von oben für dieses Modal */
+.smart-modal.fade .modal-dialog {
+    transform: none !important;
+    transition: none !important;
+}
+
+
+#blocker {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    color: red;
+    text-align: center;
+    padding-top: 20%;
+    font-family: sans-serif;
+    font-size: 24px;
+    z-index: 9999;
+}

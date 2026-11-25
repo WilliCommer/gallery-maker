@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>server/file-router.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Directory.html">Directory</a><ul class='methods'><li data-type='method'><a href="Directory.html#addFile">addFile</a></li><li data-type='method'><a href="Directory.html#fileByName">fileByName</a></li><li data-type='method'><a href="Directory.html#getDir">getDir</a></li></ul></li><li><a href="FileItem.html">FileItem</a><ul class='methods'><li data-type='method'><a href="FileItem.html#sameAs">sameAs</a></li></ul></li><li><a href="FlexibleSelect.html">FlexibleSelect</a></li></ul><h3>Modules</h3><ul><li><a href="module-file-service-api.html">file-service-api</a><ul class='methods'><li data-type='method'><a href="module-file-service-api.html#.exists">exists</a></li><li data-type='method'><a href="module-file-service-api.html#.getDir">getDir</a></li><li data-type='method'><a href="module-file-service-api.html#.getURL">getURL</a></li><li data-type='method'><a href="module-file-service-api.html#.mkDir">mkDir</a></li><li data-type='method'><a href="module-file-service-api.html#.open">open</a></li><li data-type='method'><a href="module-file-service-api.html#.readTextFile">readTextFile</a></li><li data-type='method'><a href="module-file-service-api.html#.setURL">setURL</a></li><li data-type='method'><a href="module-file-service-api.html#.trash">trash</a></li><li data-type='method'><a href="module-file-service-api.html#.trashFile">trashFile</a></li><li data-type='method'><a href="module-file-service-api.html#.writeFile">writeFile</a></li></ul></li><li><a href="module-heartbeat-router.html">heartbeat-router</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ButtonCancel">ButtonCancel</a></li><li><a href="global.html#ButtonDeleteSelection">ButtonDeleteSelection</a></li><li><a href="global.html#ButtonExplorer">ButtonExplorer</a></li><li><a href="global.html#ButtonNewFolder">ButtonNewFolder</a></li><li><a href="global.html#ButtonOpen">ButtonOpen</a></li><li><a href="global.html#ButtonOpenSingle">ButtonOpenSingle</a></li><li><a href="global.html#ButtonSave">ButtonSave</a></li><li><a href="global.html#ButtonSelectFolder">ButtonSelectFolder</a></li><li><a href="global.html#DirectoryBreadCrumb">DirectoryBreadCrumb</a></li><li><a href="global.html#FileDialog">FileDialog</a></li><li><a href="global.html#FileIcon">FileIcon</a></li><li><a href="global.html#I18n">I18n</a></li><li><a href="global.html#MIME_GROUPS">MIME_GROUPS</a></li><li><a href="global.html#SelectController">SelectController</a></li><li><a href="global.html#SelectFileBox">SelectFileBox</a></li><li><a href="global.html#fileExtension">fileExtension</a></li><li><a href="global.html#fileIsMime">fileIsMime</a></li><li><a href="global.html#getDir">getDir</a></li><li><a href="global.html#isValidDirectoryName">isValidDirectoryName</a></li><li><a href="global.html#isValidFilename">isValidFilename</a></li><li><a href="global.html#parsePath">parsePath</a></li><li><a href="global.html#selectDirectoryDlg">selectDirectoryDlg</a></li><li><a href="global.html#selectFileDialog">selectFileDialog</a></li><li><a href="global.html#selectFolderDialog">selectFolderDialog</a></li><li><a href="global.html#selectImageFilesDlg">selectImageFilesDlg</a></li><li><a href="global.html#selectSingleFileDialog">selectSingleFileDialog</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">server/file-router.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import path from 'node:path';
+import fs from 'node:fs';
+import express from 'express';
+import trash from 'trash';
+import open, { openApp } from 'open';
+
+var router = express.Router()
+var root, rootPath
+var log
+
+export default function init(options = {}) {
+    // root = options.fileRoot || options.root || 'C:/';
+    root = options.fileRoot || options.root || null;
+    log = options.log || (options.debug ? console.log : () => { })
+    if (root === null) {
+        rootPath = []
+    } else {
+        root = path.resolve(root);
+        rootPath = root.split(path.sep);
+    }
+    while (rootPath[rootPath.length - 1] === '') rootPath.pop();
+    log('init file-router', root, rootPath);
+    return router;
+}
+
+
+
+/**
+ * Retrieves the contents of a directory based on the provided path.
+ * POST /files {"path": "users/wcs"} or {"path": ["users","wcs"]}
+ */
+router.post('/files', async function (req, res, next) {
+    try {
+        const path = req.body?.path || [];
+        res.json(await getDir(path));
+    } catch (err) {
+        next(err)
+    }
+});
+
+
+/**
+ * Retrieves the contents of a directory based on the provided path.
+ * GET /dir/verzeichnis/sub  -> ['verzeichnis', 'sub']
+ */
+router.get('/dir/*path', async function (req, res, next) {
+    try {
+        const path = req.params.path || '';
+        res.json(await getDir(path));
+    } catch (err) {
+        next(err)
+    }
+});
+
+
+/**
+ * Retrieves the contents of the root directory
+ * GET /dir
+ */
+router.get('/dir', async function (req, res, next) {
+    try {
+        res.json(await getDir());
+    } catch (err) {
+        next(err)
+    }
+});
+
+
+/**
+ * check if path in body exits
+ * POST /exists {"path": "users/wcs"}
+ */
+router.post('/exists', async function (req, res, next) {
+    try {
+        let filePath = req.body?.path || req.body?.filename || [];
+        filePath = safeResolve(root, filePath, { checkRealPath: true })
+        const stat = await fs.promises.stat(filePath);
+        res.json({
+            path: filePath,
+            name: path.basename(filePath),
+            isDir: stat.isDirectory(),
+            size: stat.size,
+            time: stat.mtime,
+        })
+    } catch (err) {
+        res.json(false)
+    }
+});
+
+
+/**
+ * create a directory
+ * POST /mkdir {"path": "users/wcs"}
+ */
+router.post('/mkdir', async function (req, res, next) {
+    try {
+        let filePath = req.body?.path || req.body?.filename || [];
+        filePath = safeResolve(root, filePath)
+        log('mkdir', filePath)
+        await fs.promises.mkdir(filePath, { recursive: true });
+        res.json(true)
+    } catch (err) {
+        next(err)
+    }
+});
+
+
+/**
+ * delete a file or directory
+ * POST /trash {"path": "users/wcs"}
+ */
+router.post('/trash', async function (req, res, next) {
+    try {
+        let { directory, files } = req.body;
+        if (directory &amp;&amp; files &amp;&amp; Array.isArray(files)) {
+            directory = safeResolve(root, directory, { checkRealPath: true })
+            files = files.map(file => path.join(directory, file))
+            log('trash', files)
+            await trash(files);
+            res.json(true)
+            return
+        }
+
+        let filePath = req.body?.path || req.body?.filename;
+        if (!filePath)
+            throw new Error('trash command expect filename');
+        filePath = safeResolve(root, filePath, { checkRealPath: true })
+        if (filePath === root)
+            throw new Error('delete root folder blocked');
+        log('trash', filePath);
+        await trash(filePath);
+        res.json(true)
+    } catch (err) {
+        next(err)
+    }
+});
+
+
+/**
+ * open a file with the operating system's default application.
+ * POST /open {"path":"Users/wcs/Documents/Ablage/! readme.md"}
+ * POST /open {"path": "powershell.exe", "args": ["-Command", "start \"C:\\Users\\wcs\\Documents\\Ablage\""]}
+ */
+router.post('/open', async function (req, res, next) {
+    try {
+        log('POST open', req.body);
+        const { filename, args } = req.body;
+        if (args) {
+            log('openApp', filename, args)
+            openApp(filename, { arguments: args });
+        } else {
+            let filePath = safeResolve(root, filename)
+            log('open', filePath)
+            open(filePath);
+        }
+        res.json(true)
+    } catch (err) {
+        next(err)
+    }
+});
+
+
+
+/**
+ * POST /read
+ */
+router.post('/readtextfile', async function (req, res, next) {
+    try {
+        let filePath = req.body?.path || req.body?.filename || [];
+        log('readtextfile', filePath)
+        filePath = safeResolve(root, filePath)
+        var data = await fs.promises.readFile(filePath);
+        res.set('Content-Type', 'text/plain');
+        res.send(data);
+    } catch (err) {
+        next(err)
+    }
+});
+
+
+/**
+ * POST /write
+ */
+router.post('/write', async function (req, res, next) {
+    try {
+        let filePath = req.body?.path || req.body?.filename || [];
+        let content = req.body?.content;
+        log('write', filePath, typeof content)
+        filePath = safeResolve(root, filePath)
+        var data = await fs.promises.writeFile(filePath, content);
+        res.json(true)
+    } catch (err) {
+        next(err)
+    }
+});
+
+// -----------------------------
+
+
+function safeResolve(root, paths, { checkRealPath = false, caseInsensitive = process.platform === 'win32' } = {}) {
+
+    // EXPERIMENT full access
+    if (root === null) {
+        return simpleResolve(paths, { checkRealPath, caseInsensitive })
+    }
+
+    const segments = Array.isArray(paths) ? paths : [paths];
+    const resolvedRoot = path.resolve(root);
+    const targetPath = path.resolve(resolvedRoot, ...segments);
+
+    const checkBounds = (base, target) => {
+        const a = caseInsensitive ? base.toLowerCase() : base;
+        const b = caseInsensitive ? target.toLowerCase() : target;
+        const rel = path.relative(a, b);
+        if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
+            throw new Error(`access outside "${base}" blocked: "${target}"`);
+        }
+    };
+
+    checkBounds(resolvedRoot, targetPath);
+
+    if (!checkRealPath) return targetPath;
+
+    const realRoot = fs.realpathSync.native(resolvedRoot);
+    const missing = [];
+    let current = targetPath;
+
+    while (!fs.existsSync(current)) {
+        const parent = path.dirname(current);
+        if (parent === current) break;
+        missing.unshift(path.basename(current));
+        current = parent;
+    }
+
+    const realTarget = path.join(fs.realpathSync.native(current), ...missing);
+    checkBounds(realRoot, realTarget);
+
+    return realTarget;
+}
+
+
+function simpleResolve(paths, { checkRealPath = false } = {}) {
+    const segments = Array.isArray(paths) ? paths : [paths];
+    const targetPath = path.resolve(...segments);
+
+    if (!checkRealPath) return targetPath;
+
+    const missing = [];
+    let current = targetPath;
+
+    while (!fs.existsSync(current)) {
+        const parent = path.dirname(current);
+        if (parent === current) break;
+        missing.unshift(path.basename(current));
+        current = parent;
+    }
+
+    const realTarget = path.join(fs.realpathSync.native(current), ...missing);
+
+    return realTarget;
+}
+
+
+
+
+/**
+ * Read the contents and metadata of a directory.
+ *
+ * @param {string|string[]} [dir] - Directory path or breadcrumb trail.
+ * @returns {Promise&lt;FS_Directory|false>} Directory metadata, or false if it cannot be read.
+ */
+async function getDir(dir) {
+    log('getDir', dir)
+    // const fulldir = resolvePath(dir);
+    dir = dir || '/';
+    const resolvedDir = safeResolve(root, dir, { checkRealPath: true });
+    const pathList = resolvedDir.split(path.sep).slice(rootPath.length);
+    const res = {
+        dir: pathList.join('/'),
+        path: pathList,
+        resolvedDir,
+        files: []
+    }
+
+    const files = await fs.promises.readdir(resolvedDir);
+    for (let file of files) {
+        if (file.startsWith('.')) continue;
+        try {
+            let stat = await fs.promises.stat(path.join(resolvedDir, file));
+            res.files.push({
+                name: file,
+                isDir: stat.isDirectory(),
+                size: stat.size,
+                time: stat.mtime,
+            })
+        } catch (_) { }
+    }
+    return res;
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Nov 25 2026 18:11:26 GMT+0100 (Mitteleuropäische Normalzeit) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+
+</body>
+</html>

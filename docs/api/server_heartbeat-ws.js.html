@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>server/heartbeat-ws.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Directory.html">Directory</a><ul class='methods'><li data-type='method'><a href="Directory.html#addFile">addFile</a></li><li data-type='method'><a href="Directory.html#fileByName">fileByName</a></li><li data-type='method'><a href="Directory.html#getDir">getDir</a></li></ul></li><li><a href="FileItem.html">FileItem</a><ul class='methods'><li data-type='method'><a href="FileItem.html#sameAs">sameAs</a></li></ul></li><li><a href="FlexibleSelect.html">FlexibleSelect</a></li></ul><h3>Modules</h3><ul><li><a href="module-file-service-api.html">file-service-api</a><ul class='methods'><li data-type='method'><a href="module-file-service-api.html#.exists">exists</a></li><li data-type='method'><a href="module-file-service-api.html#.getDir">getDir</a></li><li data-type='method'><a href="module-file-service-api.html#.getURL">getURL</a></li><li data-type='method'><a href="module-file-service-api.html#.mkDir">mkDir</a></li><li data-type='method'><a href="module-file-service-api.html#.open">open</a></li><li data-type='method'><a href="module-file-service-api.html#.readTextFile">readTextFile</a></li><li data-type='method'><a href="module-file-service-api.html#.setURL">setURL</a></li><li data-type='method'><a href="module-file-service-api.html#.trash">trash</a></li><li data-type='method'><a href="module-file-service-api.html#.trashFile">trashFile</a></li><li data-type='method'><a href="module-file-service-api.html#.writeFile">writeFile</a></li></ul></li><li><a href="module-heartbeat-router.html">heartbeat-router</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ButtonCancel">ButtonCancel</a></li><li><a href="global.html#ButtonDeleteSelection">ButtonDeleteSelection</a></li><li><a href="global.html#ButtonExplorer">ButtonExplorer</a></li><li><a href="global.html#ButtonNewFolder">ButtonNewFolder</a></li><li><a href="global.html#ButtonOpen">ButtonOpen</a></li><li><a href="global.html#ButtonOpenSingle">ButtonOpenSingle</a></li><li><a href="global.html#ButtonSave">ButtonSave</a></li><li><a href="global.html#ButtonSelectFolder">ButtonSelectFolder</a></li><li><a href="global.html#DirectoryBreadCrumb">DirectoryBreadCrumb</a></li><li><a href="global.html#FileDialog">FileDialog</a></li><li><a href="global.html#FileIcon">FileIcon</a></li><li><a href="global.html#I18n">I18n</a></li><li><a href="global.html#MIME_GROUPS">MIME_GROUPS</a></li><li><a href="global.html#SelectController">SelectController</a></li><li><a href="global.html#SelectFileBox">SelectFileBox</a></li><li><a href="global.html#fileExtension">fileExtension</a></li><li><a href="global.html#fileIsMime">fileIsMime</a></li><li><a href="global.html#getDir">getDir</a></li><li><a href="global.html#isValidDirectoryName">isValidDirectoryName</a></li><li><a href="global.html#isValidFilename">isValidFilename</a></li><li><a href="global.html#parsePath">parsePath</a></li><li><a href="global.html#selectDirectoryDlg">selectDirectoryDlg</a></li><li><a href="global.html#selectFileDialog">selectFileDialog</a></li><li><a href="global.html#selectFolderDialog">selectFolderDialog</a></li><li><a href="global.html#selectImageFilesDlg">selectImageFilesDlg</a></li><li><a href="global.html#selectSingleFileDialog">selectSingleFileDialog</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">server/heartbeat-ws.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @module heartbeat-router
+ * @description
+ * Zuverlässiger WebSocket-Heartbeat für lokale Apps.
+ * Schließt den Server, wenn kein Browser-Tab mehr offen ist.
+ */
+
+import { WebSocketServer } from 'ws';
+import fs from 'node:fs';
+import path from 'node:path';
+
+// const clientDir = path.resolve(process.cwd(), 'client');
+const clientDir = path.resolve(process.cwd(), 'public');
+const time = () => new Date().toLocaleTimeString('de-DE');
+const developmentMode = process.env.NODE_ENV === 'development';
+
+let wss = null;
+let shutdownTimeout = null;
+
+// Diese Funktion wird einmalig in deiner Hauptdatei (z.B. app.js / server.js) aufgerufen
+export function initHeartbeat({
+    server,             // server instance
+    maxClient           = 1,
+    debugLog            = true,
+}) {
+
+    const log = debugLog ? console.log : ()=>{};
+
+    // create a WebSocket server (uses the existing HTTP port from Express)
+    wss = new WebSocketServer({ noServer: true });
+
+    // instruct the Express HTTP server to pass WebSocket requests to us
+    server.on('upgrade', (request, socket, head) => {
+        if (request.url === '/ws-heartbeat') {
+            wss.handleUpgrade(request, socket, head, (ws) => {
+                wss.emit('connection', ws, request);
+            });
+        }
+    });
+
+    // connection event: a browser tab opens
+    wss.on('connection', (ws) => {
+        log(time(), 'browser-tab connected.', wss.clients.size);
+        
+        // if a shutdown was planned (e.g., via a quick refresh), cancel it immediately.
+        if (shutdownTimeout) {
+            clearTimeout(shutdownTimeout);
+            shutdownTimeout = null;
+            log(time(), 'shutdown aborted - tab is back.');
+        }
+
+        if(wss.clients.size > maxClient) {
+            ws.send('forbidden')
+        }
+
+        // if the TCP connection is interrupted (tab closed, browser closed, F5 reload), hibernate
+        ws.on('close', () => {
+            log(time(), 'a tab was closed', wss.clients.size);
+            if (wss.clients.size === 0) {
+                const startShutdownAt = Date.now(); // remember timestamp upon closing
+                
+                shutdownTimeout = setTimeout(() => {
+                    log(time(), 'No more tabs open. Shutting down in 2 seconds....');
+                    const timePassed = Date.now() - startShutdownAt;
+                    
+                    // If significantly MORE than 2 seconds have elapsed between scheduling and executing the timeout
+                    // (e.g., 30 seconds due to the system entering sleep mode),
+                    // then we know: the PC has been asleep!
+                    if (timePassed > 4000) { 
+                        log(time(), '🔌 System hibernation detected. Shutdown postponed, waiting for client....');
+                        
+                        // We are giving the browser an additional 10 seconds to recover after coming out of standby.
+                        shutdownTimeout = setTimeout(() => {
+                            if (wss.clients.size === 0) {
+                                log(time(), 'Server is now shutting down permanently.');
+                                process.exit(0);
+                            }
+                        }, 10000);
+                    } else {
+                        // Normal sequence (tab was actually closed)
+                        log(time(), 'The server is now shutting down.');
+                        process.exit(0);
+                    }
+                }, 2000);
+            }
+        });
+
+    });
+
+    // start client live-reload for development
+    if(developmentMode) {
+        watchClientDir(clientDir);
+    }
+}
+
+// Send a message to ALL open tabs (for live-reload)
+export function sendBrowserReload() {
+    if (wss) {
+        console.log(time(), `Send Reload to ${wss.clients.size} open tabs.`);
+        wss.clients.forEach((client) => {
+            if (client.readyState === 1) { // 1 = OPEN
+                client.send('reload');
+            }
+        });
+    }
+}
+
+function watchClientDir(clientDir) {
+    console.log('fs.watch', clientDir);
+    fs.watch(clientDir, { recursive: true }, debounce(sendBrowserReload, 1000));
+}
+
+function debounce(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Nov 25 2026 18:11:26 GMT+0100 (Mitteleuropäische Normalzeit) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+
+</body>
+</html>
