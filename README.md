@@ -17,11 +17,7 @@ npm install
 npm start
 ```
 
-Alternatively, you can run it directly via `npx` from GitHub without cloning manually:
-
-```bash
-npx github:WilliCommer/gallery-maker
-```
+If you would like to use the program as a desktop app, you can install it globally using `npm install -g`. Alternatively, on Windows, you can create a shortcut to `start.bat` and use the `favicon.ico` file located in the `public` folder as its icon.
 
 
 ## A Desktop App Without Electron
