@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{pageTitle}}</title>
+    <link rel="icon" href="favicon.ico">
     <style>
 /* gallery-style.css */
 
@@ -56,7 +57,7 @@ body {
     background: #000;
     display: flex;
     align-items: center;
-    position: relative; /* Wichtig für absolute Buttons/Captions */
+    position: relative;
 }
 
 .carousel-inner {
@@ -69,14 +70,14 @@ body {
 .carousel-item {
     height: 100%;
     width: 100%;
-    display: none; /* Versteckt standardmäßig alle Slides */
+    display: none;
     position: absolute;
     top: 0;
     left: 0;
 }
 
 .carousel-item.active {
-    display: block; /* Zeigt nur das aktive Slide */
+    display: block;
 }
 
 .carousel-item img {
@@ -124,7 +125,7 @@ body {
 
 @media (max-width: 768px) {
     .carousel-caption {
-        display: none; /* Blendet Caption auf kleinen Bildschirmen aus */
+        display: none; 
     }
 }
 

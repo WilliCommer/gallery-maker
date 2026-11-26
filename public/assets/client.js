@@ -7363,7 +7363,6 @@ async function openProjectDlg() {
   });
   const ok = res && res.files.length;
   if (!ok) return;
-  console.log(res.files[0]);
   const filename = res.files[0].filePath;
   setRecentDir(file_service_default2.parsePath(filename).dir);
   return filename;
@@ -8020,9 +8019,10 @@ function Page() {
   );
 }
 function projectPanel() {
+  const t8 = i18n_default2.tPath("project-panel");
   const project = app_ctrl_default.session.project || {};
   const values = { ...project, projectFile: app_ctrl_default.session.projectFile };
-  const fb = _({ cols: "2 4", autoRow: true, rowClass: "mb-2", values }).add({ name: "title", label: t7("Title") }).add({ name: "name", label: t7("Name") }).add({ name: "directory", label: t7("Directory"), input: DirectoryInput, cols: "2 10" }).add({ name: "projectFile", label: t7("Filename"), readonly: true, cols: "2 10" });
+  const fb = _({ cols: "2 4", autoRow: true, rowClass: "mb-2", values }).add({ name: "title", label: t8("Title") }).add({ name: "name", label: t8("Name") }).add({ name: "directory", label: t8("Directory"), input: DirectoryInput, cols: "2 10" }).add({ name: "projectFile", label: t8("Filename"), readonly: true, cols: "2 10" });
   fb.onChange((name, value) => {
     const { projectFile, ...values2 } = fb.values;
     app_ctrl_default.session.project = { ...app_ctrl_default.session.project, ...values2 };
@@ -8030,6 +8030,18 @@ function projectPanel() {
   });
   return fb.dom;
 }
+i18n_default2.addWords({
+  Title: "\xDCberschrift",
+  Name: "Name",
+  Directory: "Zielverzeichnis",
+  Filename: "Dateiname"
+}, "de", "project-panel");
+i18n_default2.addWords({
+  Title: "Title",
+  Name: "Name",
+  Directory: "Destination Folder",
+  Filename: "File Name"
+}, "en", "project-panel");
 function appMenu() {
   const t8 = i18n_default2.tPath("appMenu");
   const { h4, span: span2 } = van_default.tags;
@@ -8099,7 +8111,6 @@ var forbiddenText = userLang === "de" ? "Die App ist in einem anderen Tab ge\xF6
 connectHeartbeat({ forbiddenText, appId });
 file_service_default2.setURL("/api");
 van_default.add(document.getElementById(appId), app_default);
-app_ctrl_default.debugLog();
 app_ctrl_default.init();
 /*! Bundled license information:
 

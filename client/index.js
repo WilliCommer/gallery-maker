@@ -22,5 +22,4 @@ connectHeartbeat({ forbiddenText, appId })
 fd.setURL('/api');	// same as backend
 
 van.add(document.getElementById(appId), appPage);
-appCtrl.debugLog()
 appCtrl.init();

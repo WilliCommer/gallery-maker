@@ -135,6 +135,7 @@ function Page() {
 // edit project settings
 
 function projectPanel() {
+  const t = i18n.tPath('project-panel');
   const project = appCtrl.session.project || {}
   const values = {...project, projectFile: appCtrl.session.projectFile}
   const fb = vanB.FormBuilder({cols: '2 4', autoRow: true, rowClass: 'mb-2', values})
@@ -151,6 +152,20 @@ function projectPanel() {
 
   return fb.dom
 }
+
+i18n.addWords({
+  Title: 'Überschrift',
+  Name: 'Name',
+  Directory: 'Zielverzeichnis',
+  Filename: 'Dateiname'
+}, 'de', 'project-panel')
+i18n.addWords({
+  Title: 'Title',
+  Name: 'Name',
+  Directory: 'Destination Folder',
+  Filename: 'File Name'
+}, 'en', 'project-panel')
+
 
 
 

@@ -1,3 +1,7 @@
+**Deutsch** | [English](index.html)
+
+:WCSLOGO size=3em:
+ 
 # Gallery Maker
 
 > Leichtgewichtig Bildergalerien erstellen

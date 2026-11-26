@@ -93,7 +93,6 @@ export async function openProjectDlg() {
     });
     const ok = res && res.files.length;
     if(!ok) return;
-    console.log(res.files[0])
     const filename = res.files[0].filePath;
     setRecentDir(fd.parsePath(filename).dir)
     return filename;

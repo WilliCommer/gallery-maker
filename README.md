@@ -1,8 +1,9 @@
-**English** | [Deutsch](README.de.md)
 
 # Gallery Maker
 
 > Create lightweight photo galleries
+
+[Documentation](https://willicommer.github.io/gallery-maker)
 
 Gallery Maker is a simple tool for organizing and generating photo galleries from local files. Instead of bundling a heavy desktop runtime like Electron, it takes a deliberately lightweight approach: Gallery Maker spins up a local Node.js server and opens its user interface right in your default browser. This gives you a local desktop-like experience without shipping an embedded browser.
 
