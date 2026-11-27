@@ -67,23 +67,86 @@
 </div><hr class="m-4"></article>
 
 <article id="configmd" class="mb-4"><div class="markdown-body"><h2 id="quick-start">Quick Start</h2>
-<p>Clone the repository and start the application locally:</p>
+<p>Um dieses Programm zu installieren müssen Sie das freie <a href="https://nodejs.org">Node.js</a> installieren.
+To install this program, you must install the free <a href="https://nodejs.org">Node.js</a>.</p>
+<p>Clone the repository or download it as Zip</p>
 
-    <div style="position: relative" id="lzb03hn">
+    <div style="position: relative" id="x7jo91g">
         <pre><code class="language-bash">git clone https://github.com
-cd gallery-maker
+</code></pre>
+
+        <button class="btn-copy" style="" title="Copy to Clipboard"
+            onclick="window.mdCopyClipboardClick(document.getElementById('x7jo91g').querySelector('code').textContent, this)"        
+        >        
+            <svg width="1em" height="1em"><use href="#icon-COPYCLIP"></use></svg>
+        </button>
+    </div>
+    <p>Then start the application locally in console</p>
+
+    <div style="position: relative" id="oi1ni16">
+        <pre><code class="language-bash">cd gallery-maker
 npm install
 npm start
 </code></pre>
 
         <button class="btn-copy" style="" title="Copy to Clipboard"
-            onclick="window.mdCopyClipboardClick(document.getElementById('lzb03hn').querySelector('code').textContent, this)"        
+            onclick="window.mdCopyClipboardClick(document.getElementById('oi1ni16').querySelector('code').textContent, this)"        
         >        
             <svg width="1em" height="1em"><use href="#icon-COPYCLIP"></use></svg>
         </button>
     </div>
-    <p>If you would like to use the program as a desktop app, you can install it globally using <code>npm install -g</code>. Alternatively, on Windows, you can create a shortcut to <code>start.bat</code> and use the <code>favicon.ico</code> file located in the <code>public</code> folder as its icon.</p>
-<h2 id="configure-gallery-maker">Configure Gallery Maker</h2>
+    <p>You can install it globally using</p>
+
+    <div style="position: relative" id="lssein8">
+        <pre><code class="language-bash">npm install -g
+</code></pre>
+
+        <button class="btn-copy" style="" title="Copy to Clipboard"
+            onclick="window.mdCopyClipboardClick(document.getElementById('lssein8').querySelector('code').textContent, this)"        
+        >        
+            <svg width="1em" height="1em"><use href="#icon-COPYCLIP"></use></svg>
+        </button>
+    </div>
+    <h3 id="for-windows-usage:">For <strong>Windows</strong> usage:</h3>
+<h4 id="how-to-create-a-shortcut-with-a-custom-icon">How to create a shortcut with a custom icon</h4>
+<ol>
+<li>
+<p><strong>Create the batch file:</strong> <em>or use the existing <code>start.bat</code></em></p>
+<ul>
+<li>Open your project folder.</li>
+<li>Right-click an empty space, select <strong>New</strong> &gt; <strong>Text Document</strong>, and name it <code>start.bat</code> (make sure to replace the <code>.txt</code> extension with <code>.bat</code>).</li>
+<li>Right-click <code>start.bat</code>, select <strong>Edit</strong> (or open it with Notepad), paste the following line inside, and save the file:
+    <div style="position: relative" id="pxe09s9">
+        <pre><code class="language-bat">call npm start
+</code></pre>
+
+        <button class="btn-copy" style="" title="Copy to Clipboard"
+            onclick="window.mdCopyClipboardClick(document.getElementById('pxe09s9').querySelector('code').textContent, this)"        
+        >        
+            <svg width="1em" height="1em"><use href="#icon-COPYCLIP"></use></svg>
+        </button>
+    </div>
+    </li>
+</ul>
+</li>
+<li>
+<p><strong>Create a shortcut:</strong></p>
+<ul>
+<li>Right-click on <code>start.bat</code> and select <strong>Create shortcut</strong> (on Windows 11, click <strong>Show more options</strong> first).</li>
+<li><em>(Optional)</em> Move this new shortcut to your Desktop or wherever you want to launch the app from.</li>
+</ul>
+</li>
+<li>
+<p><strong>Change the shortcut icon:</strong></p>
+<ul>
+<li>Right-click the newly created shortcut and select <strong>Properties</strong>.</li>
+<li>In the <strong>Shortcut</strong> tab, click the <strong>Change Icon...</strong> button at the bottom.</li>
+<li>Click <strong>Browse...</strong>, navigate to your project's <code>public</code> folder, and select the <code>favicon.ico</code> file.</li>
+<li>Click <strong>Open</strong>, then <strong>OK</strong>, and finally <strong>Apply</strong> / <strong>OK</strong> to save your changes.</li>
+</ul>
+</li>
+</ol>
+<h3 id="configure-gallery-maker">Configure Gallery Maker</h3>
 <p>Edit <code>config.json</code> for configuration.</p>
 <ul>
 <li>
@@ -115,7 +178,7 @@ Where the server stores it's session data</p>
 Enable / disable debug logs to backend console</p>
 </li>
 </ul>
-<h3 id="comment">Comment</h3>
+<h4 id="comment">Comment</h4>
 <p>The configuration &quot;fileRoot = null&quot; is intended to allow access to all drives.
 This is an experiment, however, and it is not functioning correctly.
 One issue involves the &quot;static&quot; function in Express.
@@ -154,12 +217,12 @@ Der Zugriff erfolgt klassisch im Hauptmenü &quot;Datei&quot;:</p>
 <h4 id="initialisierung-und-dateisystem-wurzel">Initialisierung und Dateisystem-Wurzel</h4>
 <p>Der Default-Export ist eine Router-Fabrik:</p>
 
-    <div style="position: relative" id="mjmi137">
+    <div style="position: relative" id="m2kv0bu">
         <pre><code class="language-js">fileRouter({ root, fileRoot, debug, log })
 </code></pre>
 
         <button class="btn-copy" style="" title="Copy to Clipboard"
-            onclick="window.mdCopyClipboardClick(document.getElementById('mjmi137').querySelector('code').textContent, this)"        
+            onclick="window.mdCopyClipboardClick(document.getElementById('m2kv0bu').querySelector('code').textContent, this)"        
         >        
             <svg width="1em" height="1em"><use href="#icon-COPYCLIP"></use></svg>
         </button>
@@ -226,7 +289,7 @@ Der Zugriff erfolgt klassisch im Hauptmenü &quot;Datei&quot;:</p>
 </table>
 <p>Antworten zum Auflisten eines Verzeichnisses haben folgende Struktur:</p>
 
-    <div style="position: relative" id="9rcxoq3">
+    <div style="position: relative" id="ed8xq81">
         <pre><code class="language-json">{
   &quot;dir&quot;: &quot;ordner/unterordner&quot;,
   &quot;path&quot;: [&quot;ordner&quot;, &quot;unterordner&quot;],
@@ -238,7 +301,7 @@ Der Zugriff erfolgt klassisch im Hauptmenü &quot;Datei&quot;:</p>
 </code></pre>
 
         <button class="btn-copy" style="" title="Copy to Clipboard"
-            onclick="window.mdCopyClipboardClick(document.getElementById('9rcxoq3').querySelector('code').textContent, this)"        
+            onclick="window.mdCopyClipboardClick(document.getElementById('ed8xq81').querySelector('code').textContent, this)"        
         >        
             <svg width="1em" height="1em"><use href="#icon-COPYCLIP"></use></svg>
         </button>
