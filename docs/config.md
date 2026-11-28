@@ -1,5 +1,8 @@
 ## Quick Start
 
+[Download Windows Installer](https://familiecommer.de/files/gallerymaker2.exe)
+
+
 Um dieses Programm zu installieren müssen Sie das freie [Node.js](https://nodejs.org) installieren.
 To install this program, you must install the free [Node.js](https://nodejs.org).
 
